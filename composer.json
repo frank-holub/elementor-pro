@@ -1,0 +1,16 @@
+{
+  "name": "frank-holub/elementor-pro",
+  "description": "Elementor Pro plugin mirror",
+  "keywords": ["wordpress", "plugin"],
+  "homepage": "https://github.com/frank-holub/elementor-pro",
+  "authors": [
+    {
+      "name": "Elementor.com",
+      "homepage": "https://elementor.com"
+    }
+  ],
+  "type": "wordpress-plugin",
+  "require": {
+    "php": ">=5.4"
+  }
+}
