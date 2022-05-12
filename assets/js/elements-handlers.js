@@ -1,4 +1,4 @@
-/*! elementor-pro - v3.6.0 - 31-01-2022 */
+/*! elementor-pro - v3.7.0 - 08-05-2022 */
 (self["webpackChunkelementor_pro"] = self["webpackChunkelementor_pro"] || []).push([["elements-handlers"],{
 
 /***/ "../assets/dev/js/frontend/elements-handlers.js":
@@ -539,7 +539,17 @@ class _default extends elementorModules.frontend.Document {
       if (!modal) {
         const settings = this.getDocumentSettings(),
               id = this.getSettings('id'),
-              triggerPopupEvent = eventType => elementorFrontend.elements.$document.trigger('elementor/popup/' + eventType, [id, this]);
+              triggerPopupEvent = eventType => {
+          const event = 'elementor/popup/' + eventType;
+          elementorFrontend.elements.$document.trigger(event, [id, this]); // TODO: Use `elementorFrontend.utils.events.dispatch` when it's in master.
+
+          window.dispatchEvent(new CustomEvent(event, {
+            detail: {
+              id,
+              instance: this
+            }
+          }));
+        };
 
         let classes = 'elementor-popup-modal';
 

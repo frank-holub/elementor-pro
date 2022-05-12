@@ -1,4 +1,4 @@
-/*! elementor-pro - v3.6.0 - 31-01-2022 */
+/*! elementor-pro - v3.7.0 - 08-05-2022 */
 (self["webpackChunkelementor_pro"] = self["webpackChunkelementor_pro"] || []).push([["preloaded-elements-handlers"],{
 
 /***/ "../assets/dev/js/frontend/preloaded-elements-handlers.js":
@@ -690,6 +690,13 @@ class CarouselBase extends elementorModules.frontend.handlers.SwiperBase {
       handleElementorBreakpoints: true
     };
 
+    if ('yes' === elementSettings.lazyload) {
+      swiperOptions.lazy = {
+        loadPrevNext: true,
+        loadPrevNextAmount: 1
+      };
+    }
+
     if (elementSettings.show_arrows) {
       swiperOptions.navigation = {
         prevEl: '.elementor-swiper-button-prev',
@@ -1016,6 +1023,14 @@ class MediaCarousel extends _base.default {
       breakpoints: breakpointsSettings,
       handleElementorBreakpoints: true
     };
+
+    if ('yes' === elementSettings.lazyload) {
+      thumbsSliderOptions.lazy = {
+        loadPrevNext: true,
+        loadPrevNextAmount: 1
+      };
+    }
+
     const Swiper = elementorFrontend.utils.swiper;
     this.swiper.controller.control = this.thumbsSwiper = await new Swiper(this.elements.$thumbsSwiper, thumbsSliderOptions); // Expose the swiper instance in the frontend
 
@@ -3982,7 +3997,17 @@ class _default extends elementorModules.frontend.Document {
       if (!modal) {
         const settings = this.getDocumentSettings(),
               id = this.getSettings('id'),
-              triggerPopupEvent = eventType => elementorFrontend.elements.$document.trigger('elementor/popup/' + eventType, [id, this]);
+              triggerPopupEvent = eventType => {
+          const event = 'elementor/popup/' + eventType;
+          elementorFrontend.elements.$document.trigger(event, [id, this]); // TODO: Use `elementorFrontend.utils.events.dispatch` when it's in master.
+
+          window.dispatchEvent(new CustomEvent(event, {
+            detail: {
+              id,
+              instance: this
+            }
+          }));
+        };
 
         let classes = 'elementor-popup-modal';
 
@@ -5709,12 +5734,13 @@ var _default = elementorModules.frontend.handlers.Base.extend({
         self = this,
         itemRatio = getComputedStyle(this.$element[0], ':after').content,
         settings = this.getSettings();
-    this.elements.$postsContainer.toggleClass(settings.classes.hasItemRatio, !!itemRatio.match(/\d/));
 
     if (self.isMasonryEnabled()) {
+      this.elements.$postsContainer.removeClass(settings.classes.hasItemRatio);
       return;
     }
 
+    this.elements.$postsContainer.toggleClass(settings.classes.hasItemRatio, !!itemRatio.match(/\d/));
     this.elements.$posts.each(function () {
       var $post = $(this),
           $image = $post.find(settings.selectors.postThumbnailImage);
@@ -5783,7 +5809,7 @@ var _default = elementorModules.frontend.handlers.Base.extend({
       container: elements.$postsContainer,
       items: elements.$posts.filter(':visible'),
       columnsCount: this.getSettings('colsCount'),
-      verticalSpaceBetween
+      verticalSpaceBetween: verticalSpaceBetween || 0
     });
     masonry.run();
   },
@@ -6656,17 +6682,31 @@ class TOCHandler extends elementorModules.frontend.handlers.Base {
   }
 
   handleNoHeadingsFound() {
-    let noHeadingsText = __('No headings were found on this page.', 'elementor-pro');
+    const noHeadingsText = __('No headings were found on this page.', 'elementor-pro');
 
     return this.elements.$tocBody.html(noHeadingsText);
   }
 
-  collapseOnInit() {
+  collapseBodyListener() {
+    const activeBreakpoints = elementorFrontend.breakpoints.getActiveBreakpointsList({
+      withDesktop: true
+    });
     const minimizedOn = this.getElementSettings('minimized_on'),
-          currentDeviceMode = elementorFrontend.getCurrentDeviceMode();
+          currentDeviceMode = elementorFrontend.getCurrentDeviceMode(),
+          isCollapsed = this.$element.hasClass(this.getSettings('classes.collapsed')); // If minimizedOn value is set to desktop, it applies for widescreen as well.
 
-    if ('tablet' === minimizedOn && 'desktop' !== currentDeviceMode || 'mobile' === minimizedOn && 'mobile' === currentDeviceMode) {
-      this.collapseBox();
+    if ('desktop' === minimizedOn || activeBreakpoints.indexOf(minimizedOn) >= activeBreakpoints.indexOf(currentDeviceMode)) {
+      if (!isCollapsed) {
+        this.collapseBox();
+      }
+    } else if (isCollapsed) {
+      this.expandBox();
+    }
+  }
+
+  onElementChange(settings) {
+    if ('minimized_on' === settings) {
+      this.collapseBodyListener();
     }
   }
 
@@ -6722,7 +6762,7 @@ class TOCHandler extends elementorModules.frontend.handlers.Base {
     this.populateTOC();
 
     if (this.getElementSettings('minimize_box')) {
-      this.collapseOnInit();
+      this.collapseBodyListener();
     }
   }
 
@@ -7236,6 +7276,21 @@ class Base extends elementorModules.frontend.handlers.Base {
       });
     }
   }
+  /**
+   * `elementorPageId` and `elementorWidgetId` are added to the url in the `_wp_http_referer` input which is then
+   * received when WooCommerce does its cart and checkout ajax requests e.g `update_order_review` and `update_cart`.
+   * These query strings are extracted from the url and used in our `load_widget_before_wc_ajax` method.
+   */
+
+
+  updateWpReferers() {
+    const selectors = this.getSettings('selectors'),
+          wpHttpRefererInputs = this.$element.find(selectors.wpHttpRefererInputs),
+          url = new URL(document.location);
+    url.searchParams.set('elementorPageId', elementorFrontend.config.post.id);
+    url.searchParams.set('elementorWidgetId', this.getID());
+    wpHttpRefererInputs.attr('value', url);
+  }
 
 }
 
@@ -7293,15 +7348,22 @@ class Cart extends _base.default {
     elementorFrontend.elements.$body.on('wc_fragments_refreshed', () => this.applyButtonsHoverAnimation());
 
     if ('yes' === this.getElementSettings('update_cart_automatically')) {
-      this.$element.on('click', selectors.quantityInput, () => this.updateCart());
+      this.$element.on('input', selectors.quantityInput, () => this.updateCart());
     }
 
-    if (elementorFrontend.isEditMode() || elementorFrontend.isWPPreviewMode()) {
-      elementorFrontend.elements.$body.on('wc_fragments_loaded wc_fragments_refreshed', () => {
-        this.modifyWpHttpReferer();
+    elementorFrontend.elements.$body.on('wc_fragments_loaded wc_fragments_refreshed', () => {
+      this.updateWpReferers();
+
+      if (elementorFrontend.isEditMode() || elementorFrontend.isWPPreviewMode()) {
         this.disableActions();
-      });
-    }
+      }
+    });
+    elementorFrontend.elements.$body.on('added_to_cart', function (e, data) {
+      // We do not want the page to reload in the Editor after we triggered the 'added_to_cart' event.
+      if (data.stop_reload) {
+        return false;
+      }
+    });
   }
 
   onInit(...args) {
@@ -7314,9 +7376,9 @@ class Cart extends _base.default {
     }
 
     this.applyButtonsHoverAnimation();
+    this.updateWpReferers();
 
     if (elementorFrontend.isEditMode() || elementorFrontend.isWPPreviewMode()) {
-      this.modifyWpHttpReferer();
       this.disableActions();
     }
   }
@@ -7348,6 +7410,10 @@ class Cart extends _base.default {
     if ('sticky_right_column' === propertyName) {
       this.toggleStickyRightColumn();
     }
+
+    if ('additional_template_select' === propertyName) {
+      elementorPro.modules.woocommerce.onTemplateIdChange('additional_template_select');
+    }
   }
 
   onDestroy(...args) {
@@ -7360,7 +7426,7 @@ class Cart extends _base.default {
     clearTimeout(this._debounce);
     this._debounce = setTimeout(() => {
       this.$element.find(selectors.updateCartButton).trigger('click');
-    }, 600);
+    }, 1500);
   }
 
   applyButtonsHoverAnimation() {
@@ -7390,14 +7456,6 @@ class Cart extends _base.default {
       if (this.elements.$hiddenInput) {
         this.elements.$hiddenInput.parent('.form-row').addClass('elementor-hidden');
       }
-    }
-  }
-
-  modifyWpHttpReferer() {
-    const selectors = this.getSettings('selectors');
-
-    if (elementorFrontend.isEditMode()) {
-      this.$element.find(selectors.wpHttpRefererInputs).attr('value', elementor.documents.getCurrent().config.urls.wp_preview);
     }
   }
 
@@ -7607,21 +7665,6 @@ class Checkout extends _base.default {
         opacity: 0.6
       }
     });
-  }
-  /**
-   * `elementorPostId` and `elementorWidgetId` are added to the url in the `_wp_http_referer` input which is then
-   * received when WooCommerce does it's `update_order_review` ajax, and extracted from this url and used with our
-   * `load_widget_before_wc_ajax` method.
-   */
-
-
-  updateWpReferers() {
-    const selectors = this.getSettings('selectors'),
-          wpHttpRefererInputs = this.$element.find(selectors.wpHttpRefererInputs),
-          url = new URL(document.location);
-    url.searchParams.set('elementorPostId', elementorFrontend.config.post.id);
-    url.searchParams.set('elementorWidgetId', this.getID());
-    wpHttpRefererInputs.attr('value', url);
   }
 
 }
@@ -7870,7 +7913,8 @@ class MyAccountHandler extends _base.default {
         tabWrapper: '.e-my-account-tab',
         tabItem: '.woocommerce-MyAccount-navigation li',
         allPageElements: '[e-my-account-page]',
-        purchasenote: 'tr.product-purchase-note'
+        purchasenote: 'tr.product-purchase-note',
+        contentWrapper: '.woocommerce-MyAccount-content-wrapper'
       }
     };
   }
@@ -7886,7 +7930,8 @@ class MyAccountHandler extends _base.default {
       $tabWrapper: this.$element.find(selectors.tabWrapper),
       $tabItem: this.$element.find(selectors.tabItem),
       $allPageElements: this.$element.find(selectors.allPageElements),
-      $purchasenote: this.$element.find(selectors.purchasenote)
+      $purchasenote: this.$element.find(selectors.purchasenote),
+      $contentWrapper: this.$element.find(selectors.contentWrapper)
     };
   }
 
@@ -7935,10 +7980,15 @@ class MyAccountHandler extends _base.default {
 
   toggleEndpointClasses() {
     const wcPages = ['dashboard', 'orders', 'view-order', 'downloads', 'edit-account', 'edit-address', 'payment-methods'];
-    this.elements.$tabWrapper.removeClass('e-my-account-tab__' + wcPages.join(' e-my-account-tab__'));
+    let wrapperClass = '';
+    this.elements.$tabWrapper.removeClass('e-my-account-tab__' + wcPages.join(' e-my-account-tab__') + ' e-my-account-tab__dashboard--custom');
+
+    if ('dashboard' === this.currentPage && this.elements.$contentWrapper.find('.elementor').length) {
+      wrapperClass = ' e-my-account-tab__dashboard--custom';
+    }
 
     if (wcPages.includes(this.currentPage)) {
-      this.elements.$tabWrapper.addClass('e-my-account-tab__' + this.currentPage);
+      this.elements.$tabWrapper.addClass('e-my-account-tab__' + this.currentPage + wrapperClass);
     }
   }
 
@@ -7946,7 +7996,7 @@ class MyAccountHandler extends _base.default {
     const elementSettings = this.getElementSettings();
 
     if (elementSettings.forms_buttons_hover_animation) {
-      this.$element.find('.woocommerce button.button').addClass('elementor-animation-' + elementSettings.forms_buttons_hover_animation);
+      this.$element.find('.woocommerce button.button,  #add_payment_method #payment #place_order').addClass('elementor-animation-' + elementSettings.forms_buttons_hover_animation);
     }
 
     if (elementSettings.tables_button_hover_animation) {
@@ -7971,6 +8021,10 @@ class MyAccountHandler extends _base.default {
 
     if (0 === propertyName.indexOf('forms_rows_gap')) {
       this.removePaddingBetweenPurchaseNote(this.elements.$purchasenote);
+    }
+
+    if ('customize_dashboard_select' === propertyName) {
+      elementorPro.modules.woocommerce.onTemplateIdChange('customize_dashboard_select');
     }
   }
 

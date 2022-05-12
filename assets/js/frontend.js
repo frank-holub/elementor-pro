@@ -1,4 +1,4 @@
-/*! elementor-pro - v3.6.0 - 31-01-2022 */
+/*! elementor-pro - v3.7.0 - 08-05-2022 */
 (self["webpackChunkelementor_pro"] = self["webpackChunkelementor_pro"] || []).push([["frontend"],{
 
 /***/ "../node_modules/@babel/runtime/helpers/defineProperty.js":
@@ -90,8 +90,11 @@ class ElementorProFrontend extends elementorModules.ViewModule {
       payments: _frontend5.default,
       progressTracker: _frontend6.default
     }; // Keep this line before applying filter on the handlers.
+    // TODO: BC - Deprecated since 3.7.0
 
-    elementorProFrontend.trigger('elementor-pro/modules/init:before');
+    elementorProFrontend.trigger('elementor-pro/modules/init:before'); // TODO: Use this instead.
+
+    elementorProFrontend.trigger('elementor-pro/modules/init/before');
     handlers = elementorFrontend.hooks.applyFilters('elementor-pro/frontend/handlers', handlers);
     jQuery.each(handlers, (moduleName, ModuleClass) => {
       this.modules[moduleName] = new ModuleClass();
@@ -985,12 +988,12 @@ class _default extends elementorModules.ViewModule {
   }
 
   bindEvents() {
-    this.onWindowResize = this.onWindowResize.bind(this);
-    elementorFrontend.elements.$window.on('resize', this.onWindowResize);
+    this.defineDimensions = this.defineDimensions.bind(this);
+    elementorFrontend.elements.$window.on('resize elementor-pro/motion-fx/recalc', this.defineDimensions);
   }
 
   unbindEvents() {
-    elementorFrontend.elements.$window.off('resize', this.onWindowResize);
+    elementorFrontend.elements.$window.off('resize elementor-pro/motion-fx/recalc', this.defineDimensions);
   }
 
   addBackgroundLayer() {
@@ -1154,10 +1157,6 @@ class _default extends elementorModules.ViewModule {
     this.runInteractions();
   }
 
-  onWindowResize() {
-    this.defineDimensions();
-  }
-
 }
 
 exports.default = _default;
@@ -1182,6 +1181,7 @@ class _default extends elementorModules.Module {
   constructor() {
     super();
     elementorFrontend.elementsHandler.attachHandler('paypal-button', () => __webpack_require__.e(/*! import() | paypal-button */ "paypal-button").then(__webpack_require__.bind(__webpack_require__, /*! ./handlers/paypal-button */ "../modules/payments/assets/js/frontend/handlers/paypal-button.js")));
+    elementorFrontend.elementsHandler.attachHandler('stripe-button', () => __webpack_require__.e(/*! import() | stripe-button */ "stripe-button").then(__webpack_require__.bind(__webpack_require__, /*! ./handlers/stripe-button */ "../modules/payments/assets/js/frontend/handlers/stripe-button.js")));
   }
 
 }
@@ -1263,12 +1263,15 @@ Object.defineProperty(exports, "__esModule", ({
 exports.default = void 0;
 
 var _default = elementorModules.frontend.handlers.Base.extend({
+  currentConfig: {},
+  debouncedReactivate: null,
+
   bindEvents() {
-    elementorFrontend.addListenerOnce(this.getUniqueHandlerID() + 'sticky', 'resize', this.refresh);
+    elementorFrontend.addListenerOnce(this.getUniqueHandlerID() + 'sticky', 'resize', this.reactivateOnResize);
   },
 
   unbindEvents() {
-    elementorFrontend.removeListeners(this.getUniqueHandlerID() + 'sticky', 'resize', this.refresh);
+    elementorFrontend.removeListeners(this.getUniqueHandlerID() + 'sticky', 'resize', this.reactivateOnResize);
   },
 
   isStickyInstanceActive() {
@@ -1299,9 +1302,9 @@ var _default = elementorModules.frontend.handlers.Base.extend({
     });
   },
 
-  activate() {
-    var elementSettings = this.getElementSettings(),
-        stickyOptions = {
+  getConfig() {
+    const elementSettings = this.getElementSettings(),
+          stickyOptions = {
       to: elementSettings.sticky,
       offset: this.getResponsiveSetting('sticky_offset'),
       effectsOffset: this.getResponsiveSetting('sticky_effects_offset'),
@@ -1312,7 +1315,7 @@ var _default = elementorModules.frontend.handlers.Base.extend({
         spacer: 'elementor-sticky__spacer'
       }
     },
-        $wpAdminBar = elementorFrontend.elements.$wpAdminBar;
+          $wpAdminBar = elementorFrontend.elements.$wpAdminBar;
 
     if (elementSettings.sticky_parent) {
       stickyOptions.parent = '.e-container, .elementor-widget-wrap';
@@ -1322,7 +1325,12 @@ var _default = elementorModules.frontend.handlers.Base.extend({
       stickyOptions.offset += $wpAdminBar.height();
     }
 
-    this.$element.sticky(stickyOptions);
+    return stickyOptions;
+  },
+
+  activate() {
+    this.currentConfig = this.getConfig();
+    this.$element.sticky(this.currentConfig);
   },
 
   deactivate() {
@@ -1353,8 +1361,24 @@ var _default = elementorModules.frontend.handlers.Base.extend({
     }
   },
 
-  refresh() {
-    this.run(true);
+  /**
+   * Reactivate the sticky instance on resize only if the new sticky config is different from the current active one,
+   * in order to avoid re-initializing the sticky when not needed, and avoid layout shifts.
+   * The config can be different between devices, so this need to be checked on each screen resize to make sure that
+   * the current screen size uses the appropriate Sticky config.
+   *
+   * @return {void}
+   */
+  reactivateOnResize() {
+    clearTimeout(this.debouncedReactivate);
+    this.debouncedReactivate = setTimeout(() => {
+      const config = this.getConfig(),
+            isDifferentConfig = JSON.stringify(config) !== JSON.stringify(this.currentConfig);
+
+      if (isDifferentConfig) {
+        this.run(true);
+      }
+    }, 300);
   },
 
   reactivate() {
@@ -1385,7 +1409,7 @@ var _default = elementorModules.frontend.handlers.Base.extend({
     // The `run` function requests the current device mode from the CSS so it's not ready immediately.
     // (need to wait for the `deviceMode` event to change the CSS).
     // See `elementorFrontend.getCurrentDeviceMode()` for reference.
-    setTimeout(this.refresh);
+    setTimeout(() => this.run(true));
   },
 
   onInit() {

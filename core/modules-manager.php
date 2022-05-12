@@ -30,6 +30,7 @@ final class Modules_Manager {
 			'screenshots',
 			'compatibility-tag',
 			'admin-top-bar',
+			'notes',
 
 			// Modules with Widgets.
 			'theme-builder',
@@ -49,6 +50,7 @@ final class Modules_Manager {
 			'share-buttons',
 			'theme-elements',
 			'blockquote',
+			'custom-code',
 			'woocommerce',
 			'social',
 			'library',
@@ -58,7 +60,6 @@ final class Modules_Manager {
 			'wp-cli',
 			'lottie',
 			'code-highlight',
-			'custom-code',
 			'video-playlist',
 			'payments',
 			'progress-tracker',

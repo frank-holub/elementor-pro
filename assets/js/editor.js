@@ -1,4 +1,4 @@
-/*! elementor-pro - v3.6.0 - 31-01-2022 */
+/*! elementor-pro - v3.7.0 - 08-05-2022 */
 /******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
@@ -1006,6 +1006,14 @@ module.exports = elementorModules.editor.utils.Module.extend({
   __construct: function __construct(elementType) {
     this.elementType = elementType;
     this.addEditorListener();
+  },
+  updateOptions: function updateOptions(name, options) {
+    var controlView = this.getEditorControlView(name);
+
+    if (controlView) {
+      this.getEditorControlModel(name).set('options', options);
+      controlView.render();
+    }
   },
   addEditorListener: function addEditorListener() {
     var self = this;
@@ -3093,14 +3101,6 @@ module.exports = ElementEditorModule.extend({
       }
     }, immediately);
   },
-  updateOptions: function updateOptions(name, options) {
-    var controlView = this.getEditorControlView(name);
-
-    if (controlView) {
-      this.getEditorControlModel(name).set('options', options);
-      controlView.render();
-    }
-  },
   onInit: function onInit() {
     this.addSectionListener('section_' + this.getName(), this.onSectionActive);
   },
@@ -4640,6 +4640,8 @@ _Object$defineProperty(exports, "__esModule", {
 
 exports.default = exports.BaseGlobalWidgetPrepareUpdate = void 0;
 
+__webpack_require__(/*! core-js/modules/es6.array.filter.js */ "../node_modules/core-js/modules/es6.array.filter.js");
+
 __webpack_require__(/*! core-js/modules/es6.array.map.js */ "../node_modules/core-js/modules/es6.array.map.js");
 
 var _classCallCheck2 = _interopRequireDefault(__webpack_require__(/*! @babel/runtime-corejs2/helpers/classCallCheck */ "../node_modules/@babel/runtime-corejs2/helpers/classCallCheck.js"));
@@ -4668,7 +4670,8 @@ var BaseGlobalWidgetPrepareUpdate = /*#__PURE__*/function (_$e$modules$hookData$
     key: "getConditions",
     value: function getConditions(args) {
       var _args$containers = args.containers,
-          containers = _args$containers === void 0 ? [args.container] : _args$containers;
+          containers = _args$containers === void 0 ? [args.container] : _args$containers; // When the container is repeater item it should add the global repeater itself to the `lastChangedContainers` and not the repeater item
+
       return containers.some(function (container) {
         var _container$renderer, _container$renderer$m;
 
@@ -4680,11 +4683,17 @@ var BaseGlobalWidgetPrepareUpdate = /*#__PURE__*/function (_$e$modules$hookData$
     value: function apply(args) {
       var _args$containers2 = args.containers,
           containers = _args$containers2 === void 0 ? [args.container] : _args$containers2,
-          component = $e.components.get('document/global');
-      component.lastChangedContainers = containers.map(function (container) {
+          component = $e.components.get('document/global'); // Filter only the containers that are global widgets. (Can pass multiple containers that some of them global widgets and some of them not).
+
+      var globalWidgetContainers = containers.filter(function (container) {
+        var _container$renderer2, _container$renderer2$;
+
+        return (_container$renderer2 = container.renderer) === null || _container$renderer2 === void 0 ? void 0 : (_container$renderer2$ = _container$renderer2.model) === null || _container$renderer2$ === void 0 ? void 0 : _container$renderer2$.get('templateID');
+      });
+      component.lastChangedContainers = globalWidgetContainers.map(function (container) {
         return container.renderer;
       });
-      containers.forEach(function (container) {
+      globalWidgetContainers.forEach(function (container) {
         component.changedContainersId[container.renderer.model.get('templateID')] = container.renderer.id;
       });
     }
@@ -5822,6 +5831,7 @@ exports.default = Model;
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
+/* provided dependency */ var __ = __webpack_require__(/*! @wordpress/i18n */ "@wordpress/i18n")["__"];
 
 
 var _Object$defineProperty = __webpack_require__(/*! @babel/runtime-corejs2/core-js/object/define-property */ "../node_modules/@babel/runtime-corejs2/core-js/object/define-property.js");
@@ -5901,7 +5911,7 @@ var View = /*#__PURE__*/function (_WidgetView) {
       }
 
       var container = (0, _get2.default)((0, _getPrototypeOf2.default)(View.prototype), "getContainer", this).call(this);
-      container.label = container.label + ' (' + elementorPro.translate('global') + ')';
+      container.label = container.label + ' (' + __('global', 'elementor-pro') + ')';
       return container;
     }
   }, {
@@ -6076,6 +6086,94 @@ var _default = /*#__PURE__*/function (_elementorModules$edi) {
 }(elementorModules.editor.utils.Module);
 
 exports.default = _default;
+
+/***/ }),
+
+/***/ "../modules/payments/assets/js/editor/module.js":
+/*!******************************************************!*\
+  !*** ../modules/payments/assets/js/editor/module.js ***!
+  \******************************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+
+var _Object$defineProperty = __webpack_require__(/*! @babel/runtime-corejs2/core-js/object/define-property */ "../node_modules/@babel/runtime-corejs2/core-js/object/define-property.js");
+
+var _interopRequireDefault = __webpack_require__(/*! @babel/runtime-corejs2/helpers/interopRequireDefault */ "../node_modules/@babel/runtime-corejs2/helpers/interopRequireDefault.js");
+
+_Object$defineProperty(exports, "__esModule", {
+  value: true
+});
+
+exports.default = void 0;
+
+var _classCallCheck2 = _interopRequireDefault(__webpack_require__(/*! @babel/runtime-corejs2/helpers/classCallCheck */ "../node_modules/@babel/runtime-corejs2/helpers/classCallCheck.js"));
+
+var _createClass2 = _interopRequireDefault(__webpack_require__(/*! @babel/runtime-corejs2/helpers/createClass */ "../node_modules/@babel/runtime-corejs2/helpers/createClass.js"));
+
+var _inherits2 = _interopRequireDefault(__webpack_require__(/*! @babel/runtime-corejs2/helpers/inherits */ "../node_modules/@babel/runtime-corejs2/helpers/inherits.js"));
+
+var _createSuper2 = _interopRequireDefault(__webpack_require__(/*! @babel/runtime-corejs2/helpers/createSuper */ "../node_modules/@babel/runtime-corejs2/helpers/createSuper.js"));
+
+var _stripe = _interopRequireDefault(__webpack_require__(/*! ./stripe */ "../modules/payments/assets/js/editor/stripe.js"));
+
+var StripeModule = /*#__PURE__*/function (_elementorModules$edi) {
+  (0, _inherits2.default)(StripeModule, _elementorModules$edi);
+
+  var _super = (0, _createSuper2.default)(StripeModule);
+
+  function StripeModule() {
+    (0, _classCallCheck2.default)(this, StripeModule);
+    return _super.apply(this, arguments);
+  }
+
+  (0, _createClass2.default)(StripeModule, [{
+    key: "onElementorInit",
+    value: function onElementorInit() {
+      this.stripeButton = new _stripe.default('stripe-button');
+    }
+  }]);
+  return StripeModule;
+}(elementorModules.editor.utils.Module);
+
+exports.default = StripeModule;
+
+/***/ }),
+
+/***/ "../modules/payments/assets/js/editor/stripe.js":
+/*!******************************************************!*\
+  !*** ../modules/payments/assets/js/editor/stripe.js ***!
+  \******************************************************/
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+
+
+var ElementEditorModule = __webpack_require__(/*! elementor-pro/editor/element-editor-module */ "../assets/dev/js/editor/element-editor-module.js");
+
+module.exports = ElementEditorModule.extend({
+  __construct: function __construct() {
+    ElementEditorModule.prototype.__construct.apply(this, arguments);
+  },
+  getName: function getName() {
+    return 'stripe-button';
+  },
+  onInit: function onInit() {
+    elementor.channels.editor.on('editor:widget:stripe-button:section_stripe_account:activated', this.onSectionActive);
+  },
+  onSectionActive: function onSectionActive() {
+    var _this = this;
+
+    return elementorPro.ajax.addRequest('get_stripe_tax_rates', {
+      success: function success(data) {
+        _this.updateOptions('stripe_test_env_tax_rates_list', data.test_api_key);
+
+        _this.updateOptions('stripe_live_env_tax_rates_list', data.live_api_key);
+      }
+    }, true);
+  }
+});
 
 /***/ }),
 
@@ -9082,9 +9180,13 @@ _Object$defineProperty2(exports, "__esModule", {
 
 exports.default = void 0;
 
+var _regenerator = _interopRequireDefault(__webpack_require__(/*! @babel/runtime/regenerator */ "../node_modules/@babel/runtime/regenerator/index.js"));
+
 __webpack_require__(/*! core-js/modules/es6.regexp.split.js */ "../node_modules/core-js/modules/es6.regexp.split.js");
 
 var _defineProperty = _interopRequireDefault(__webpack_require__(/*! @babel/runtime-corejs2/core-js/object/define-property */ "../node_modules/@babel/runtime-corejs2/core-js/object/define-property.js"));
+
+var _asyncToGenerator2 = _interopRequireDefault(__webpack_require__(/*! @babel/runtime-corejs2/helpers/asyncToGenerator */ "../node_modules/@babel/runtime-corejs2/helpers/asyncToGenerator.js"));
 
 var _classCallCheck2 = _interopRequireDefault(__webpack_require__(/*! @babel/runtime-corejs2/helpers/classCallCheck */ "../node_modules/@babel/runtime-corejs2/helpers/classCallCheck.js"));
 
@@ -9236,6 +9338,35 @@ var ThemeBuilderModule = /*#__PURE__*/function (_elementorModules$edi) {
         controlView.$el.toggle(!!controlModel.get('autocomplete').object);
       }
     }
+  }, {
+    key: "openSiteIdentity",
+    value: function () {
+      var _openSiteIdentity = (0, _asyncToGenerator2.default)( /*#__PURE__*/_regenerator.default.mark(function _callee(e) {
+        return _regenerator.default.wrap(function _callee$(_context) {
+          while (1) {
+            switch (_context.prev = _context.next) {
+              case 0:
+                e.preventDefault();
+                _context.next = 3;
+                return $e.run('panel/global/open');
+
+              case 3:
+                $e.route('panel/global/settings-site-identity');
+
+              case 4:
+              case "end":
+                return _context.stop();
+            }
+          }
+        }, _callee);
+      }));
+
+      function openSiteIdentity(_x) {
+        return _openSiteIdentity.apply(this, arguments);
+      }
+
+      return openSiteIdentity;
+    }()
   }]);
   return ThemeBuilderModule;
 }(elementorModules.editor.utils.Module);
@@ -10342,13 +10473,24 @@ var WoocommerceModule = /*#__PURE__*/function (_elementorModules$edi) {
   }
 
   (0, _createClass2.default)(WoocommerceModule, [{
+    key: "onElementorFrontendInit",
+    value: function onElementorFrontendInit() {
+      elementorFrontend.elements.$body.on('added_to_cart', function (e, data) {
+        // We do not want the page to reload in the Editor after we triggered the 'added_to_cart' event.
+        if (data.stop_reload) {
+          return false;
+        }
+      });
+    }
+  }, {
     key: "onElementorLoaded",
     value: function onElementorLoaded() {
       var _this2 = this;
 
       this.component = $e.components.register(new _component.default({
         manager: this
-      }));
+      })); // WooCommerce Notice Settings.
+
       var noticeSections = ['section_woocommerce_notices', 'woocommerce_message_notices', 'woocommerce_info_notices', 'woocommerce_error_notices'];
 
       for (var _i = 0, _noticeSections = noticeSections; _i < _noticeSections.length; _i++) {
@@ -10356,7 +10498,16 @@ var WoocommerceModule = /*#__PURE__*/function (_elementorModules$edi) {
         elementor.channels.editor.on('kit_settings:' + section + ':activated', function () {
           _this2.renderMockNotices(elementor.documents.getCurrent().container.settings.get('woocommerce_notices_elements'));
         });
-      }
+      } // Custom Empty Cart Template.
+
+
+      elementor.channels.editor.on('editor:widget:woocommerce-cart:section_additional_options:activated', function () {
+        _this2.onTemplateIdChange('additional_template_select');
+      }); // Custom My Account Dashboard Template
+
+      elementor.channels.editor.on('editor:widget:woocommerce-my-account:section_additional_options:activated', function () {
+        _this2.onTemplateIdChange('customize_dashboard_select');
+      });
     }
   }, {
     key: "renderMockNotices",
@@ -10403,6 +10554,22 @@ var WoocommerceModule = /*#__PURE__*/function (_elementorModules$edi) {
       });
     }
   }, {
+    key: "onTemplateIdChange",
+    value: function onTemplateIdChange(sectionActive) {
+      var editor = elementor.getPanelView().getCurrentPageView(),
+          model = editor.getOption('editedElementView').getEditModel(),
+          settingsModel = model.get('settings'),
+          templateID = settingsModel.get(sectionActive),
+          $editButton = editor.$el.find('.elementor-edit-template');
+
+      if (!templateID) {
+        $editButton.addClass('e-control-tool-disabled').hide();
+      } else {
+        var editUrl = ElementorConfig.home_url + '?p=' + templateID + '&elementor';
+        $editButton.prop('href', editUrl).removeClass('e-control-tool-disabled').show();
+      }
+    }
+  }, {
     key: "onCreateWidget",
     value: function onCreateWidget(container) {
       var widgetType = container.model.get('widgetType');
@@ -10428,6 +10595,10 @@ var WoocommerceModule = /*#__PURE__*/function (_elementorModules$edi) {
     value: function onUpdateDocument() {
       var _this3 = this;
 
+      // On page Save trigger the 'added_to_cart' event so that the persistent cart cache can refresh so that the 'Preview' can be immediately updated without having to go and make a change in the Cart first.
+      elementorFrontend.elements.$body.trigger('added_to_cart', [{
+        stop_reload: true
+      }]);
       var saveWoocommercePageSettingKeys = (0, _keys.default)(this.createdPageSettingsWidgets),
           lastWidgetCreated = saveWoocommercePageSettingKeys[saveWoocommercePageSettingKeys.length - 1],
           postId = elementor.documents.getCurrent().id;
@@ -17326,6 +17497,8 @@ var _module7 = _interopRequireDefault(__webpack_require__(/*! modules/woocommerc
 
 var _module8 = _interopRequireDefault(__webpack_require__(/*! modules/scroll-snap/assets/js/editor/module */ "../modules/scroll-snap/assets/js/editor/module.js"));
 
+var _module9 = _interopRequireDefault(__webpack_require__(/*! modules/payments/assets/js/editor/module */ "../modules/payments/assets/js/editor/module.js"));
+
 var ElementorPro = Marionette.Application.extend({
   config: {},
   modules: {},
@@ -17354,6 +17527,7 @@ var ElementorPro = Marionette.Application.extend({
       siteEditor: new _editor3.default(),
       screenshots: new _module5.default(),
       woocommerce: new _module7.default(),
+      stripe: new _module9.default(),
       // Popup is depended on Theme Builder.
       popup: new _module.default(),
       videoPlaylistModule: new _module6.default(),
